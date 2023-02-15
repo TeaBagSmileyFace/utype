@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Speak-up 2</title>
+        <script src = "https://code.jquery.com/jquery-3.6.3.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    </head>
+    <body>
+        <script>
+            let lastMessageTime = 0;
+
+            function sendMessage(username, message) {
+                axios.post('/sendMessage', {
+                    username,
+                    message
+                })
+                .then(function (response) {
+                    console.log(response)
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            }
+
+            function getMessages() {
+                axios.get("/getMessages")
+                .then(function (response) {
+                    if(response) {
+                        loadMessages(response.data["messages"])
+                    }
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            }
+
+            function loadMessages(msgs) {
+                $("#messages").empty()
+                msgs.forEach(item => {
+                    $("#messages").append(`<li>From: ${item.username} message: ${item.message}</li>`)
+                })
+            }
+
+            $(document).ready(() => {
+                const socket = new WebSocket("ws://localhost:8081");
+
+                socket.onopen = function(e) {
+                    console.log("[open] Connection established");
+                    console.log("Sending to server");
+                    socket.send("My name is John");
+                };
+
+                socket.onmessage = function(event) {
+                    const msg = event.data;
+
+                    if(msg == "new message") getMessages();
+                };
+
+                socket.onclose = function(event) {
+                if (event.wasClean) {
+                    console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                } else {
+                    console.log('[close] Connection died');
+                }
+                };
+
+                socket.onerror = function(error) {
+                    console.log(`[error]`);
+                };
+                getMessages()
+                $("#sender").on("click", (event) => {
+                    const username = $("#username").val()
+                    const message = $("#message").val()
+
+                    if(Date.now() - lastMessageTime < 5 * 1000) {
+                        return alert("Wait")
+                    }
+
+                    if(username.length > 30) {
+                        return alert("Too long username")
+                    }
+
+                    if(message.length > 200) {
+                        return alert("Too long message")
+                    }
+
+                    lastMessageTime = Date.now()
+                    sendMessage(username, message)
+                    $("#message").val(" ")
+                })
+                $("#getmessages").on("click", (event) => {
+                    getMessages()
+                })
+            })
+        </script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            #messages {
+                margin: 10px;
+                display: block;
+            }
+
+            input {
+                height: 30px;
+                width: 150px;
+                margin-top: 10px;
+                display: block;
+                margin: 0 auto;
+            }
+
+            .form {
+                display: block;
+            }
+
+            button {
+                height: 30px;
+                width: 100px;
+                margin-top: 10px;
+            }
+
+            .app {
+                text-align: center;
+            }
+        </style>
+        <div class = "app">
+            <h2>Messages</h2>
+            <ul id = "messages"></ul>
+            <div class = "form">
+                <input id = "username" placeholder="username">
+                <input id = "message" placeholder="message">
+                <button id = "sender">Send</button>
+                <button id = "getmessages">Get messages</button>
+            </div>
+        </div>
+    </body>
+</html>
